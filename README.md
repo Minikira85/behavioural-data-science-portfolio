@@ -23,4 +23,22 @@ significantly.
 Tools used: Python, pandas, numpy, matplotlib and seaborn.
 
 ---
-More projects coming soon, including R analyses on behavioural datasets.
+### 📊 Netflix Usage & Theory of Planned Behaviour — Behavioural Analysis (R)
+
+`netflix_TPB_behavioural_analysis.Rmd`
+
+**Tools:** R, ggplot2, ggcorrplot, GGally, tidyverse
+
+This project analyses Netflix usage patterns in a sample of young people 
+using the Theory of Planned Behaviour (TPB) framework. It explores eight 
+behavioural dimensions including intention, attitude, perceived control 
+and social norms.
+
+The analysis includes frequency tables, group comparisons by sex 
+(t-tests with 95% CI), Pearson correlation matrices with significance 
+testing, and multivariate visualisation.
+
+Note: datasets not included due to academic data privacy restrictions. 
+Code structure and methodology are fully reproducible with equivalent data.
+
+
