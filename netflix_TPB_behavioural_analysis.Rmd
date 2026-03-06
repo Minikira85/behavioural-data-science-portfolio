@@ -1,6 +1,6 @@
 INST---
 title: "Gestión y Organización de Datos: PRÁCTICA 1"
-author: LOURDES CASADO VIDIGAL (NIUB/77121002W)
+author: LOURDES 
 output: html_notebook
 ---
 
