@@ -1,0 +1,561 @@
+---
+title: "Modelos Estadísticos: RETO 1"
+author: Lourdes 
+output: html_notebook
+---
+
+## EJERCICIOS 
+
+
+### EJERCICIO 1
+
+Analizad a nivel descriptivo (mediante representaciones tabulares y gráficas) y comentad brevemente todas las variables incluidas en la base de datos excepto la variable de registro (*instant*}). (1 punto)
+
+```{r warning=FALSE,message=FALSE}
+
+if (!requireNamespace("tidyverse", quietly = TRUE)) {
+install.packages("tidyverse")
+}
+library(tidyverse)
+
+if (!requireNamespace("ggplot2", quietly = TRUE)) {
+install.packages("ggplot2")
+}
+library(ggplot2)
+
+#1. Cargar datos
+
+day_df <- read.csv("day.csv")
+
+
+#2. Inspección inicial
+str(day_df)
+head(day_df, 5)
+summary(day_df)
+
+#3. Identificación de valores faltantes
+sum(is.na(day_df))
+colSums(is.na(day_df))
+colSums(day_df == 9999, na.rm = TRUE)
+
+#Tratamiento valores faltantes
+day_df[day_df == 9999] <- NA
+day_df <- drop_na(day_df)
+
+#Comprobación y eliminación de duplicados
+sum(duplicated(day_df))
+day_df <- distinct(day_df)
+
+#Corrección de errores/rangos
+num_vars <- c("temp", "atemp", "hum", "windspeed", "cnt")
+num_vars <- intersect(num_vars, names(day_df))
+
+if (length(num_vars) > 0) {
+  day_df <- day_df %>%
+    mutate(across(all_of(num_vars), ~ ifelse(. < 0, NA, .)))
+  day_df <- drop_na(day_df)
+}
+
+#4. Revisión final y guardar
+cat("Dimensiones finales:", nrow(day_df), "x", ncol(day_df), "\n")
+str(day_df)
+summary(day_df)
+
+write.csv(day_df, "day_limpio.csv", row.names = FALSE)
+
+#Ejercicio 1 datos limpios
+#1. Cargar datos limpios
+day_df <- read.csv("day_limpio.csv")
+
+#2. Recodificar variables categóricas
+day_rec <- day_df %>%
+  mutate(
+    season = factor(season,
+                    levels = 1:4,
+                    labels = c("Primavera", "Verano", "Invierno", "Otoño")),
+    yr = factor(yr,
+                levels = c(0, 1),
+                labels = c("2011", "2012")),
+    mnth = factor(mnth,
+                  levels = 1:12,
+                  labels = c("Ene", "Feb", "Mar", "Abr", "May", "Jun",
+                             "Jul", "Ago", "Sep", "Oct", "Nov", "Dic")),
+    holiday = factor(holiday,
+                     levels = c(0, 1),
+                     labels = c("No festivo", "Festivo")),
+    weekday = factor(weekday,
+                     levels = 0:6,
+                     labels = c("Lun", "Mar", "Mie", "Jue", "Vier", "Sab", "Dom")),
+    workingday = factor(workingday,
+                        levels = c(0, 1),
+                        labels = c("No laborable", "Laborable")),
+    weathersit = factor(weathersit,
+                        levels = 1:3,
+                        labels = c("Despejado/pocas nubes",
+                                   "Nublado/niebla",
+                                   "Lluvia/nieve ligera"))
+  )
+
+#3. Descriptivo tabular
+num_cols <- sapply(day_rec, is.numeric)
+num_vars <- names(day_rec)[num_cols]
+num_vars <- num_vars[num_vars != "instant"] 
+print("Variables numéricas:")
+print(num_vars)
+summary(day_rec[, num_vars])
+
+
+# Identificar variables categóricas
+cat_vars <- names(day_rec)[sapply(day_rec, is.factor)]
+
+# Tablas de frecuencia variables categóricas
+lapply(cat_vars, table)
+
+#4. Descriptivo gráfico
+#Vatiables numéricas- histogramas
+
+num_cols <- names(num_vars)
+for (v in num_cols) {
+  p <- ggplot(day_rec, aes_string(x = v)) +
+    geom_histogram(bins = 30, fill = "#957DAD", color = "black") + 
+    labs(title = paste("Distribución de", v),
+         x = v,
+         y = "Frecuencia"
+         ) + theme_minimal()
+  print(p)
+}
+#Diagramas de barras variables categóricas
+cat_cols <- names(cat_vars)
+
+for (v in cat_cols) {
+  p <- ggplot(day_rec, aes_string(x = v)) +
+    geom_bar(fill = "#A3BE8C", color = "black") +
+    labs(title = paste("Frecuencia de", v),
+         x = v,
+         y = "Frecuencia") +
+    theme_minimal()
+  print(p)
+}
+#Variable respuesta: boxplot por estación
+#Boxplot variable respuesta por estación
+ggplot(day_rec, aes(x = season, y = cnt)) +
+geom_boxplot(fill = "#81A1C1", color = "black") +
+labs(title = "Distribución del número total de usuarios por estación",
+x = "Estación",
+y = "Número total de usuarios (cnt)") +
+theme_minimal()
+
+``` 
+1 Ejercicio: En el conjunto de datos original (day), que incluye 731 observaciones, se observa que la variable de respuesta cnt presenta valores entre 22 y 8714, con una media de 4504 usuarios por día, y una distribución sesgada hacia valores altos. Las variables climáticas muestran que temp y atemp están fuertemente correlacionadas entre sí y presentan correlaciones positivas moderadas con cnt (≈ 0.63), mientras que hum y windspeed se relacionan negativamente con cnt (-0.1 y -0.23, respectivamente). Entre las variables categóricas, la mayoría de los días son laborables, no festivos y con condiciones meteorológicas favorables. Los histogramas de las variables numéricas y los diagramas de barras de las categóricas confirman estas tendencias: cnt tiende a ser mayor en estaciones cálidas, días laborables y condiciones meteorológicas buenas, mientras que días festivos o con clima adverso presentan menores conteos.
+
+### EJERCICIO 2
+
+Ejecutad y comentad brevemente análisis bivariados entre la variable de respuesta (*cnt*) y el resto de variables de la base de datos excepto la variable de registro (*instant*). (1.5 puntos)
+
+```{r warning=FALSE,message=FALSE,fig.width=12,fig.height=12}
+
+library(tidyverse)
+
+#1. Eliminar variable de registro
+
+day_bivariado <- dplyr::select(day_rec, -instant)
+
+#2. Separar variables númericas y categóricas
+
+num_vars <- c("temp", "atemp", "hum", "windspeed")
+cat_vars <- c("season", "weathersit", "workingday", "holiday")
+
+#3. cnt vs variables numéricas
+
+for (v in names(num_vars)) {
+  
+  p <- ggplot(day_bivariado, aes(x = .data[[v]], y = cnt)) +
+    geom_point(alpha = 0.6, color = "#957DAD") +
+    geom_smooth(method = "lm", se = FALSE, color = "#957DAD") +
+    labs(
+      title = paste("Relación entre cnt y", v),
+      x = v,
+      y = "cnt"
+    ) +
+    theme_minimal()
+  cat("Correlación cnt -", v, ":", 
+      round(cor(day_bivariado[[v]], day_bivariado$cnt), 2), "\n\n")
+
+  print(p)
+}
+
+#4. cnt vs variables categóricas
+
+for (v in names(cat_vars)) {
+  
+  p <- ggplot(day_bivariado, aes(x = .data[[v]], y = cnt)) +
+    geom_boxplot(fill = "#A3BE8C", color = "black", alpha = 0.7) +
+    labs(
+      title = paste("Distribución de cnt según", v),
+      x = v,
+      y = "cnt"
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  print(p)
+}
+
+#Análisis bivariado categóricas vs categóricas (chi-cuadrado)
+
+for(i in 1:(length(cat_vars)-1)) {
+  for(j in (i+1):length(cat_vars)) {
+    
+    var1 <- cat_vars[i]
+    var2 <- cat_vars[j]
+    
+    tab <- table(day_bivariado[[var1]], day_bivariado[[var2]])
+    
+    chi <- chisq.test(tab)
+    
+    cat("\n=== ", var1, "vs", var2, " ===\n")
+    print(tab)
+    cat("p-valor:", round(chi$p.value, 4), "\n")
+    
+    if(chi$p.value < 0.05) {
+      cat("ASOCIACIÓN SIGNIFICATIVA\n")
+    } else {
+      cat("SIN EVIDENCIA DE ASOCIACIÓN\n")
+    }
+  }
+}
+```
+2 Ejercicio: Análisis bivariado
+En el análisis bivariado se observa que la temperatura (temp y atemp) es la variable que muestra una relación más clara con cnt, con una correlación positiva moderada (r = 0.63). Esto indica que a medida que aumentan las temperaturas, también lo hace el número de alquileres. Por el contrario, la humedad y la velocidad del viento presentan relaciones negativas débiles, lo que sugiere que las condiciones meteorológicas adversas pueden reducir ligeramente la demanda, aunque su efecto es mucho menor que el de la temperatura.
+
+En cuanto a las variables categóricas, solo se detecta una asociación significativa entre season y weathersit, algo esperable dado que las condiciones meteorológicas dependen en parte de la estación. También aparece una asociación muy fuerte entre workingday y holiday, coherente con la propia definición de ambas variables. El resto de combinaciones no muestran dependencia estadísticamente significativa.
+
+En conjunto, la temperatura destaca como el factor más relevante en el comportamiento de cnt, mientras que las asociaciones entre variables categóricas son, en general, coherentes con la estructura lógica del conjunto de datos.
+
+### EJERCICIO 3
+
+Dividid la muestra en muestra de entrenamiento ($70\%$) y muestra de test($30\%$), utilizando previamente la instrucción *set.seed(123)*. Llevad a cabo un modelo de regresión múltiple para predecir la variable *cnt* incluyendo únicamente las variables numéricas referidas a las condiciones climáticas. Interpretad sus coeficientes, así como la utilidad global del modelo. Utilizad únicamente la muestra de entrenamiento. (1.5 puntos)
+
+```{r warning=FALSE,message=FALSE}
+#Utilizamos day_rec del ej anterior
+library(tidyverse)
+library(car)      # Para VIF
+if (!require(effects)) install.packages("effects")
+library(effects)
+
+#1. División muestra 70% train, 30% test con set.seed(123)
+
+set.seed(123)
+n <- nrow(day_rec)
+train_index <- sample(1:n, size = round(0.7 * n), replace = FALSE)
+day_train <- day_rec[train_index, ]
+day_test <- day_rec[-train_index, ]
+
+cat("Muestra train:", nrow(day_train),
+    "observaciones (",
+    round(100 * nrow(day_train) / n, 1),
+    "%)\n")
+
+cat("Muestra test: ", nrow(day_test),
+    "observaciones (",
+    round(100 * nrow(day_test) / n, 1),
+    "%)\n\n")
+
+#2. Variables numéricas climáticas: temp, atemp, hum, windspeed
+
+clim_vars <- c("temp", "atemp", "hum", "windspeed")
+
+#3. Modelo regresión múltiple solo en TRAIN
+
+modelo_cnt <- lm(cnt ~ temp + atemp + hum + windspeed, data = day_train)
+
+#4. Resumen 
+
+summary(modelo_cnt)
+
+#5. VIF para multicolinealidad
+if (!require(car)) install.packages("car")
+library(car)
+vif(modelo_cnt)
+
+#6. Efectos de las variables
+efectos_cnt <- allEffects(modelo_cnt)
+
+#7. Graficar cada efecto con ggplot2, evitando solapamiento
+for (v in names(efectos_cnt)) {
+  df <- as.data.frame(efectos_cnt[[v]])
+  
+  p <- ggplot(df, aes_string(x = v, y = "fit")) +
+    geom_line(color = "#957DAD", size = 1) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2, fill = "#957DAD") +
+    labs(title = paste("Efecto de", v, "sobre cnt"),
+         x = v,
+         y = "Número de usuarios (cnt)") +
+    theme_minimal(base_size = 14)  # texto más grande para evitar solapamiento
+  print(p)
+}
+```
+3. Ejercicio: El modelo de regresión múltiple que incluye únicamente las variables climáticas muestra que la sensación térmica (atemp) se asocia a un aumento del número de usuarios, mientras que la humedad (hum) y la velocidad del viento (windspeed) tienden a reducirlos. Por otro lado, la temperatura (temp) deja de ser significativa, probablemente debido a su fuerte correlación con la sensación térmica.
+
+El modelo explica aproximadamente un 44% de la variabilidad en la demanda diaria de usuarios (R² ajustado ≈ 0.44), y el test F global indica que el conjunto de predictores es estadísticamente significativo (p < 0.001). Los valores de VIF sugieren que existe cierta multicolinealidad entre temp y atemp, por lo que sería recomendable no incluir ambas variables simultáneamente en modelos posteriores.
+
+En resumen, las condiciones climáticas capturan gran parte de la variación en el uso del servicio, y la sensación térmica parece ser el factor más influyente dentro de este conjunto de variables.
+
+### EJERCICIO 4
+
+Añadid al modelo anterior el predictor categórico \texttt{weathersit} e interpretad sus coeficientes interpretando, además, su utilidad global. Utilizad únicamente la muestra de entrenamiento.  (1.5 puntos)
+
+```{r warning=FALSE,message=FALSE,fig.width=12,fig.height=12}
+
+# Modelo con weathersit solo TRAIN
+#1. Comprobamos que weathersit es factor, var. categórica
+str(day_train$weathersit)
+
+#2. Modelo anterior ej.3 var climáticas numéricas
+modelo_cnt <- lm(cnt ~ temp + atemp + hum + windspeed, data = day_train)
+
+#3. Nuevo modelo + weathersit
+modelo_cnt2 <- lm (cnt ~ temp + atemp + hum + windspeed + weathersit,
+                  data = day_train)
+#4. Resumen del nuevo modelo
+
+summary(modelo_cnt2)
+
+#5. Cálculo de efectos parciales
+efectos_cnt2 <- allEffects(modelo_cnt2)
+
+#6. Gráficos de efectos
+for (v in names(efectos_cnt2)) {
+  df <- as.data.frame(efectos_cnt2[[v]])
+  
+  p <- ggplot(df, aes(x = df[,1], y = fit)) +
+    geom_line(size = 1) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) +
+    labs(title = paste("Efecto de", v, "sobre cnt"),
+         x = v,
+         y = "Número de usuarios (cnt)") +
+    theme_minimal(base_size = 14)
+  
+  print(p)
+}
+```
+
+
+4 Ejercicio: Al incorporar la variable categórica weathersit al modelo del ejercicio anterior, se observa que las condiciones meteorológicas desfavorables se asocian a una reducción del número de usuarios respecto a la categoría de referencia “Despejado/pocas nubes”, una vez controlados el resto de factores climáticos.
+
+En concreto, los días nublados o con niebla presentan, en promedio, 271 usuarios menos, con un efecto marginalmente significativo (p = 0.097), mientras que los días de lluvia o nieve ligera muestran una disminución mucho más acusada, de aproximadamente 1 835 usuarios (p < 0.001), lo que indica un impacto claramente relevante sobre la demanda.
+
+Desde el punto de vista del ajuste, la inclusión de weathersit mejora el rendimiento global del modelo: el R² ajustado aumenta de 0.44 a 0.46, lo que supone explicar alrededor de un 2% adicional de la variabilidad en cnt, y el error estándar residual se reduce de 1 420 a 1 394, indicando una ligera ganancia en precisión predictiva. El test F global (F = 73.45, p < 0.001) confirma que el modelo ampliado es estadísticamente significativo y más informativo que el del ejercicio anterior.
+
+
+### EJERCICIO 5
+
+Añadid al modelo de la pregunta anterior el término de interacción windspeed*hum, interpretad los nuevos coeficientes y llevad a cabo algún contraste global asociado al modelo resultante. Utilizad únicamente la muestra de entrenamiento. (1.5 puntos)
+
+```{r warning=FALSE,message=FALSE}
+library(tidyverse)
+library(car)
+library(effects)
+
+#1. Modelo con interacción hum * windspeed
+modelo_cnt4 <- lm(cnt ~ atemp + hum * windspeed + weathersit,
+                  data = day_train)
+
+#2. Resumen del modelo
+summary(modelo_cnt4)
+
+#3. Multicolinealidad
+vif(modelo_cnt4)
+
+#4. Contraste global: comparación con modelo sin interacción
+modelo_cnt3 <- lm(cnt ~ atemp + hum + windspeed + weathersit,
+                  data = day_train)
+
+anova(modelo_cnt3, modelo_cnt4)
+
+#5. Efectos parciales
+efectos_cnt4 <- allEffects(modelo_cnt4)
+
+#6. Gráficos de efectos (uno por variable)
+for (v in names(efectos_cnt4)) {
+  df <- as.data.frame(efectos_cnt4[[v]])
+  
+  p <- ggplot(df, aes(x = df[,1], y = fit)) +
+    geom_line(size = 1) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) +
+    labs(title = paste("Efecto de", v, "sobre cnt"),
+         x = v,
+         y = "Número de usuarios (cnt)") +
+    theme_minimal(base_size = 14)
+  
+  print(p)
+}
+```
+5 Ejercicio: En este ejercicio se amplía el modelo anterior incorporando el término de interacción hum × windspeed, con el objetivo de evaluar si el efecto de la humedad sobre el número de usuarios depende del nivel de viento, o viceversa.
+
+Los resultados muestran que el término de interacción no es estadísticamente significativo (p = 0.456), lo que indica que no existe evidencia de un efecto conjunto relevante entre la humedad y la velocidad del viento en la predicción de cnt. Al incluir la interacción, los efectos principales de hum y windspeed dejan de ser significativos, lo cual es esperable debido al aumento de colinealidad inducido por el término de interacción, como reflejan los valores elevados de VIF asociados a estas variables.
+
+Los coeficientes correspondientes a weathersit se mantienen estables respecto a los modelos anteriores: los días nublados o con niebla presentan una reducción moderada del número de usuarios (≈ −284, p = 0.080, marginalmente significativa), mientras que los días de lluvia o nieve ligera se asocian a una disminución clara y altamente significativa de la demanda (≈ −1 837 usuarios, p < 0.001). La sensación térmica (atemp) continúa siendo el predictor más influyente, con un efecto positivo y altamente significativo.
+
+Desde el punto de vista del ajuste global, el R² ajustado (0.460) permanece prácticamente idéntico al del modelo sin interacción. El contraste F entre ambos modelos (F = 0.557, p = 0.456) confirma que la inclusión del término de interacción no mejora significativamente la capacidad explicativa del modelo.
+
+En conjunto, estos resultados sugieren que el modelo del ejercicio anterior, sin interacción, resulta suficiente para describir la relación entre las variables climáticas y el número de usuarios, siendo preferible por su mayor parsimonia e interpretabilidad.
+
+### EJERCICIO 6
+
+Utilizad el método de *eliminación hacia atrás* para reducir el nivel de complejidad del modelo anterior. Utilizad únicamente la muestra de entrenamiento. (1.5 puntos)
+
+```{r warning=FALSE,message=FALSE,fig.width=12,fig.height=12}
+library(MASS)
+library(effects)
+library(car)
+
+#1. Modelo inicial (el más complejo, del EJ5)
+modelo_full <- lm(cnt ~ atemp + hum * windspeed + weathersit,
+                  data = day_train)
+
+#2. Eliminación hacia atrás basada en AIC
+modelo_backward <- step(modelo_full, direction = "backward", trace = FALSE)
+
+#3. Resumen del modelo final
+summary(modelo_backward)
+
+#4. Multicolinealidad
+vif(modelo_backward)
+
+#5. Efectos parciales del modelo final
+efectos_cnt_final <- allEffects(modelo_backward)
+
+#6. Gráficos de efectos parciales
+for (v in names(efectos_cnt_final)) {
+  df <- as.data.frame(efectos_cnt_final[[v]])
+  
+  p <- ggplot(df, aes(x = df[,1], y = fit)) +
+    geom_line(size = 1) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) +
+    labs(title = paste("Efecto de", v, "sobre cnt"),
+         x = v,
+         y = "Número de usuarios (cnt)") +
+    theme_minimal(base_size = 14)
+  
+  print(p)
+}
+```
+6.Ejercicio: se aplica el método de eliminación hacia atrás para reducir la complejidad del modelo anterior, partiendo del modelo más completo que incluía la interacción hum × windspeed. A partir de este, se eliminan los términos que no aportan una mejora significativa al ajuste.
+
+El procedimiento conduce a un modelo final sin interacción, en el que se mantienen la sensación térmica (atemp), la humedad (hum), la velocidad del viento (windspeed) y weathersit. La sensación térmica presenta un efecto positivo y altamente significativo, mientras que la humedad y el viento muestran efectos negativos y significativos sobre el número de usuarios.
+
+En cuanto a weathersit, los días nublados o con niebla se asocian a una reducción moderada de la demanda, y los días de lluvia o nieve ligera a una disminución clara y estadísticamente significativa.
+
+El modelo final presenta un R² ajustado de 0.46 y un test F global altamente significativo, manteniendo una buena capacidad explicativa con baja multicolinealidad. En conjunto, se obtiene un modelo más parsimonioso y fácilmente interpretable, sin pérdida apreciable de ajuste respecto al modelo más complejo.
+
+### EJERCICIO 7
+
+Validad mediante contrastes estadísticos y gráficos los supuestos teóricos del modelo lineal utilizando el modelo obtenido en la pregunta anterior y utilizando únicamente la muestra de entrenamiento. Complementariamente, reportar algún indicador de ajuste para la muestra de test. (1.5 puntos)
+
+```{r warning=FALSE,message=FALSE}
+#Modelo: cnt ~ atemp + hum + windspeed + weathersit
+#Usando TRAIN (70%) + RMSE en TEST (30%)
+
+
+library(lmtest)   # bp test, Durbin-Watson
+library(car)  
+library(effects)
+#TRAIN/TEST
+set.seed(123)
+day_train <- day_rec[train_index, ] 
+day_train <- day_bivariado[train_index, ]
+day_test  <- day_bivariado[-train_index, ]
+
+modelo_final <- lm(cnt ~ atemp + hum + windspeed + weathersit, data = day_train)
+
+# 1. GRÁFICOS DIAGNÓSTICOS (TRAIN)
+par(mfrow = c(2,2))
+plot(modelo_final)
+par(mfrow = c(1,1))
+
+# 2. CONTRASTES ESTADÍSTICOS DE SUPUESTOS (TRAIN)
+tests <- list(
+  "Normalidad residuos (Shapiro-Wilk)" = shapiro.test(residuals(modelo_final)),
+  "Homocedasticidad (Breusch-Pagan)" = bptest(modelo_final),
+  "Independencia residuos (Durbin-Watson)" = dwtest(modelo_final)
+)
+
+cat("\n=== CONTRASTES ESTADÍSTICOS ===\n")
+for(nombre in names(tests)) {
+  test <- tests[[nombre]]
+  cat("\n", nombre, ":\n")
+  if("statistic" %in% names(test) & "p.value" %in% names(test)) {
+    cat("Estadístico =", round(test$statistic, 2),
+        "p-valor =", round(test$p.value, 4), "\n")
+  }
+}
+
+# Multicolinealidad
+vif_vals <- vif(modelo_final)
+cat("\nMulticolinealidad (VIF):\n")
+for(i in 1:length(vif_vals)) {
+  cat(names(vif_vals)[i], ": ", round(vif_vals[i], 2), "\n")
+}
+
+# 3. INDICADORES DE AJUSTE
+rmse_train <- sqrt(mean(residuals(modelo_final)^2))
+pred_test <- predict(modelo_final, newdata = day_test)
+rmse_test <- sqrt(mean((day_test$cnt - pred_test)^2))
+
+ajuste_nombres <- c("RMSE TRAIN", "RMSE TEST", "Diferencia RMSE")
+ajuste_valores <- c(rmse_train, rmse_test, rmse_test - rmse_train)
+
+cat("\n=== INDICADORES DE AJUSTE ===\n")
+for(i in 1:length(ajuste_nombres)) {
+  cat(ajuste_nombres[i], ": ", round(ajuste_valores[i], 2), "\n")
+}
+cat("\n=== EFECTOS MARGINALES ===\n")
+
+ef <- allEffects(modelo_final)
+
+# Gráfico y valores para atemp
+plot(ef["atemp"], main="Efecto sensación térmica (atemp)")
+cat("\nEfecto marginal de atemp:\n")
+print(ef$atemp)
+
+# Gráfico y valores para weathersit
+plot(ef["weathersit"], main="Efecto tiempo (weathersit)",
+     cex.axis=0.75, cex.lab=0.9)
+cat("\nEfecto marginal de weathersit:\n")
+print(ef$weathersit)  
+
+# Resultados modelo final en TEST
+summary_test <- data.frame(
+  Real = day_test$cnt,
+  Predicho = pred_test,
+  Residuo = day_test$cnt - pred_test
+)
+head(summary_test, 10)
+
+# R² en test
+ss_res <- sum((day_test$cnt - pred_test)^2)
+ss_tot <- sum((day_test$cnt - mean(day_test$cnt))^2)
+r2_test <- 1 - ss_res/ss_tot
+cat("R² TEST:", round(r2_test, 4), "\n")
+cat("RMSE TEST:", round(rmse_test, 2), "\n")
+```
+7. Ejercicio: Los resultados del ejercicio 7 indican que el modelo final funciona razonablemente bien, aunque no cumple todos los supuestos de forma estricta. El test de Shapiro-Wilk señala que los residuos se desvían de la normalidad perfecta (p-valor muy pequeño), algo habitual en muestras grandes, por lo que esta violación es más teórica que práctica. En cambio, el test de Breusch-Pagan indica heterocedasticidad (p ≈ 0), es decir, la variabilidad de los residuos no es completamente constante.
+
+Por el lado positivo, el test de Durbin-Watson muestra que no hay problemas de autocorrelación en los residuos (estadístico ≈ 2, p-valor alto), y los valores de VIF son bajos (≈1–2), lo que sugiere que no hay multicolinealidad preocupante y que los coeficientes se pueden interpretar con confianza.
+
+Los indicadores de ajuste son equilibrados: el RMSE en entrenamiento (~1385) y en test (~1423) son muy similares, con una diferencia pequeña (~38), lo que indica que el modelo generaliza bien y no está sobreajustado. En conjunto, aunque algunos supuestos clásicos no se cumplen estrictamente, el modelo es estable, interpretable y ofrece una capacidad predictiva razonablemente buena.
+
+Los efectos marginales refuerzan estos hallazgos: por ejemplo, cada aumento en la sensación térmica (atemp) se asocia con incrementos de hasta ~6.700 usuarios, mientras que los días nublados o con niebla reducen el uso en ~270 usuarios y la lluvia o nieve ligera lo disminuyen hasta ~1.800–1.900 usuarios. Esto coincide con la interpretación de los coeficientes del modelo y ofrece una evidencia directa de cómo cada variable impacta de manera cuantitativa en el uso diario de bicicletas.
+
+
+
+El análisis completo de los siete ejercicios nos permite entender de manera cuantitativa cómo las condiciones climáticas y meteorológicas influyen en el uso de bicicletas. En términos generales, los días cálidos y con buena sensación térmica (atemp) son los que registran mayor número de usuarios: por ejemplo, los modelos muestran que cada aumento de la sensación térmica se asocia con aproximadamente 6.800–14.000 usuarios más, dependiendo del modelo y del conjunto de variables consideradas. La temperatura en sí (temp) deja de ser significativa al incluir la sensación térmica, debido a su fuerte correlación con atemp.
+
+Por el contrario, la humedad y la velocidad del viento reducen el uso de bicicletas. La regresión indica que un incremento moderado de la humedad puede restar cerca de 1.600–3.000 usuarios, y un viento fuerte reduce los alquileres en aproximadamente 1.400–4.200 usuarios, evidenciando que las condiciones climáticas adversas limitan la actividad.
+
+Las condiciones meteorológicas categóricas muestran un efecto aún más claro: los días nublados o con niebla disminuyen los alquileres en unos 270 usuarios, mientras que los días de lluvia o nieve ligera pueden reducirlos en 1.800–1.900 usuarios en comparación con días despejados. Esto confirma que la bicicleta se usa principalmente cuando el clima es favorable y disminuye drásticamente en condiciones adversas.
+
+En cuanto al ajuste de los modelos, los indicadores muestran que las variables climáticas y meteorológicas explican alrededor del 46% de la variabilidad de cnt (R² ajustado ≈ 0.46). Los valores de RMSE en entrenamiento (~1.385) y test (~1.423) indican que el modelo generaliza bien, con predicciones confiables para nuevas observaciones. A pesar de que algunos supuestos clásicos, como la normalidad de residuos y la homocedasticidad, no se cumplen estrictamente, el modelo es estable, interpretable y útil para prever el comportamiento del uso de bicicletas según el clima.
+
+En resumen, los usuarios prefieren la bicicleta en días cálidos, con buena sensación térmica y cielos despejados, mientras que lluvia, nieve ligera, viento fuerte y alta humedad reducen significativamente su uso. La evidencia cuantitativa confirma la importancia de considerar tanto variables numéricas como categóricas para entender la dinámica diaria de los alquileres de bicicletas.
