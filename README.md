@@ -42,3 +42,16 @@ Note: datasets not included due to academic data privacy restrictions.
 Code structure and methodology are fully reproducible with equivalent data.
 
 
+## Bike Sharing Regression Analysis
+
+**Predicting Daily Bike Rentals from Climate Data Multiple Linear Regression in R**
+
+This project uses a real bike-sharing dataset (731 daily observations) to build and validate a multiple linear regression model predicting the total number of daily rentals based on climate and weather variables.
+
+**Dataset:** Capital Bikeshare system, Washington D.C. Variables include temperature, apparent temperature, humidity, wind speed, and categorical weather conditions.
+
+**What the analysis covers:** Descriptive and bivariate analysis of all variables, progressive model building from numeric climate predictors to categorical weather conditions, backward elimination to reduce model complexity, and full validation using statistical tests (Shapiro-Wilk, Breusch-Pagan, Durbin-Watson, VIF) and diagnostic plots. Final model performance is evaluated on a held-out test set (30%) using RMSE and R².
+
+**Tools:** R, tidyverse, ggplot2, lmtest, car, effects, MASS
+
+**Grade:** 9.75 / 10
