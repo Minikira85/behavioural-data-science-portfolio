@@ -1,57 +1,56 @@
 # Behavioural Data Science Portfolio
 
-Hi, I'm Lourdes, a Clinical Laboratory Technician transitioning into 
-Behavioural Data Science. This repository collects projects from my 
-MSc at the Universitat de Barcelona, where I'm learning to combine 
-my clinical background with data analysis.
+Selected MSc projects in Behavioural Data Science at the Universitat de Barcelona, covering behavioural analysis, longitudinal data, regression modelling, and applied statistics in Python and R.
 
 ## Projects
 
-### Burnout and Wellbeing in Coaches — Longitudinal Study (Python)
+### 🧠 Burnout and Wellbeing in Coaches — Longitudinal Study
+**File:** `burnout_coaching_longitudinal_analysis.ipynb`
 
-`burnout_coaching_longitudinal_analysis.ipynb`
+This project analyses psychological wellbeing in a sample of coaches measured at three time points. It uses three validated psychometric scales: Self-Compassion (SCS), Burnout (CBQ), and Perceived Social Support (SSQ).
 
-This project analyses psychological wellbeing in a sample of coaches 
-measured at three different time points. I worked with three validated 
-psychometric scales: Self-Compassion (SCS), Burnout (CBQ) and 
-Perceived Social Support (SSQ).
+A key part of the work was handling missing data correctly before scoring the scales, since this step has a strong impact on the final results.
 
-The main challenge was handling missing data correctly before scoring 
-the scales — a small but important detail that changes the results 
-significantly.
-
-Tools used: Python, pandas, numpy, matplotlib and seaborn.
+**Tools:** Python, pandas, NumPy, matplotlib, seaborn
 
 ---
-### 📊 Netflix Usage & Theory of Planned Behaviour — Behavioural Analysis (R)
 
-`netflix_TPB_behavioural_analysis.Rmd`
+### 📺 Netflix Usage & Theory of Planned Behaviour — Behavioural Analysis
+**File:** `netflix_TPB_behavioural_analysis.Rmd`
 
-**Tools:** R, ggplot2, ggcorrplot, GGally, tidyverse
+This project explores Netflix usage patterns in a sample of young people using the Theory of Planned Behaviour (TPB) framework. It covers eight behavioural dimensions, including intention, attitude, perceived control, and social norms.
 
-This project analyses Netflix usage patterns in a sample of young people 
-using the Theory of Planned Behaviour (TPB) framework. It explores eight 
-behavioural dimensions including intention, attitude, perceived control 
-and social norms.
+The analysis includes frequency tables, group comparisons by sex, Pearson correlation matrices with significance testing, and multivariate visualisation.
 
-The analysis includes frequency tables, group comparisons by sex 
-(t-tests with 95% CI), Pearson correlation matrices with significance 
-testing, and multivariate visualisation.
+**Tools:** R, tidyverse, ggplot2, ggcorrplot, GGally
 
-Note: datasets not included due to academic data privacy restrictions. 
-Code structure and methodology are fully reproducible with equivalent data.
+**Note:** Datasets are not included due to academic data privacy restrictions. The code structure and methodology are fully reproducible with equivalent data.
 
+---
 
-## Bike Sharing Regression Analysis
+### 🚲 Bike Sharing Regression Analysis
+**Project:** Predicting Daily Bike Rentals from Climate Data
 
-**Predicting Daily Bike Rentals from Climate Data Multiple Linear Regression in R**
+This project uses a real bike-sharing dataset with 731 daily observations to build and validate a multiple linear regression model predicting daily rentals from climate and weather variables.
 
-This project uses a real bike-sharing dataset (731 daily observations) to build and validate a multiple linear regression model predicting the total number of daily rentals based on climate and weather variables.
-
-**Dataset:** Capital Bikeshare system, Washington D.C. Variables include temperature, apparent temperature, humidity, wind speed, and categorical weather conditions.
-
-**What the analysis covers:** Descriptive and bivariate analysis of all variables, progressive model building from numeric climate predictors to categorical weather conditions, backward elimination to reduce model complexity, and full validation using statistical tests (Shapiro-Wilk, Breusch-Pagan, Durbin-Watson, VIF) and diagnostic plots. Final model performance is evaluated on a held-out test set (30%) using RMSE and R².
+The analysis includes descriptive and bivariate exploration, progressive model building, backward elimination, and full validation using diagnostic tests and plots. Final performance was evaluated on a held-out test set using RMSE and R².
 
 **Tools:** R, tidyverse, ggplot2, lmtest, car, effects, MASS
 
-**Grade:** 9.75 / 10
+
+## Focus areas
+- Behavioural data analysis.
+- Longitudinal study design.
+- Statistical modelling and regression.
+- Reproducible workflows.
+- Data visualisation.
+- Applied research in health and behaviour.
+
+## What this repository shows
+This portfolio demonstrates how I approach data analysis in behavioural and health contexts, from data preparation and missing-data handling to modelling, interpretation, and visual communication.
+
+## Data privacy
+Some datasets are not included because of academic privacy restrictions. The analyses remain reproducible through the provided code and methodology.
+
+**Tools:** R, tidyverse, ggplot2, lmtest, car, effects, MASS
+
