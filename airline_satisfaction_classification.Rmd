@@ -1,6 +1,6 @@
 ---
 title: "Modelos Estadísticos: RETO 2"
-author: GRUPO 1
+author: "Lourdes Casado Vidigal (github.com/Minikira85), Mónica Ginet Pachón Basallo (github.com/mpachonbasa), Carlos Darío Rubí Turrent (github.com/rubiturrent-CD), Pamela Valembois Madrigal (github.com/pvalembois)"
 output: html_notebook
 ---
 
