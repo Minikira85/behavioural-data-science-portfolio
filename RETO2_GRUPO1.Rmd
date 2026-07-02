@@ -1,0 +1,921 @@
+---
+title: "Modelos Estadísticos: RETO 2"
+author: GRUPO 1
+output: html_notebook
+---
+
+## EJERCICIOS 
+
+### EJERCICIO 1
+
+Analizad a nivel descriptivo (mediante representaciones tabulares y gráficas) y comentad brevemente todas las variables incluidas en la base de datos excepto la variable de registro (*id*}). (1 punto)
+
+```{r warning=FALSE,message=FALSE}
+# Análisis Descriptivo
+
+require(tidyverse)
+require(scales)
+
+# Cargar datos
+
+train <- read_csv("train.csv") |>
+  dplyr::select(-any_of(c("id", "...1")))
+
+# Estructura del dataset
+
+glimpse(train)
+
+# Identificación de variables
+
+vars_numericas <- train |>
+  dplyr::select(where(is.numeric)) |>
+  names()
+
+vars_categoricas <- train |>
+  dplyr::select(where(~ !is.numeric(.))) |>
+  names()
+
+vars_numericas
+vars_categoricas
+
+
+# Revisión de valores faltantes
+
+na_summary <- train |>
+  summarise(across(everything(), ~ sum(is.na(.)))) |>
+  pivot_longer(everything(), names_to = "variable", values_to = "nas") |>
+  mutate(pct = round(nas / nrow(train) * 100, 3)) |>
+  filter(nas > 0)
+
+na_summary
+
+
+# Análisis descriptivo tabular
+
+summary(train |> dplyr::select(all_of(vars_numericas)))
+
+lapply(
+  train |> dplyr::select(all_of(vars_categoricas)),
+  table
+)
+
+
+# Gráfico 1: Variables continuas
+
+vars_continuas <- c("Age", "Arr.delay", "Dep.delay", "Flight.Distance")
+
+train |>
+  pivot_longer(
+    cols = all_of(vars_continuas),
+    names_to = "variable",
+    values_to = "valor"
+  ) |>
+  ggplot(aes(x = valor)) +
+  geom_histogram(
+    bins = 30,
+    fill = "steelblue",
+    color = "white"
+  ) +
+  facet_wrap(~variable, scales = "free", ncol = 2) +
+  scale_x_continuous(labels = comma) +
+  labs(
+    title = "Distribución de variables continuas",
+    x = "Valor",
+    y = "Frecuencia"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    panel.spacing = unit(1.2, "lines")
+  )
+
+
+# Gráfico 2: Variables tipo rating (1–5)
+
+vars_ratings <- setdiff(vars_numericas, vars_continuas)
+
+train |>
+  pivot_longer(
+    cols = all_of(vars_ratings),
+    names_to = "variable",
+    values_to = "valor"
+  ) |>
+  ggplot(aes(x = valor)) +
+  geom_histogram(
+    bins = 5,
+    fill = "steelblue",
+    color = "white"
+  ) +
+  facet_wrap(~variable, scales = "free_y", ncol = 3) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title = "Distribución de variables de satisfacción (escala 1–5)",
+    x = "Puntuación",
+    y = "Frecuencia"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    strip.text = element_text(size = 9, face = "bold"),
+    axis.text.y = element_text(size = 7),
+    axis.text.x = element_text(size = 8),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    panel.spacing = unit(1.2, "lines")
+  )
+
+
+# Gráfico 3: Variables categóricas
+
+train |>
+  pivot_longer(
+    cols = all_of(vars_categoricas),
+    names_to = "variable",
+    values_to = "valor"
+  ) |>
+  ggplot(aes(x = valor)) +
+  geom_bar(fill = "darkorange") +
+  facet_wrap(~variable, scales = "free_x", ncol = 3) +
+  labs(
+    title = "Distribución de las variables categóricas",
+    x = "Categoría",
+    y = "Frecuencia"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    strip.text = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(angle = 30, hjust = 1, size = 8),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    panel.spacing = unit(1.2, "lines")
+  )
+```
+1. Análisis descriptivo. La muestra incluye 103.904 observaciones de pasajeros de vuelos comerciales, con datos completos salvo en retraso de llegada (0.3% faltantes). La variable Satisfaction presentó desbalance moderado (56.7% neutral o insatisfechos, 43.3% satisfechos).
+
+Las variables categóricas mostraron predominio de clientes leales (81.7%), viajes de negocios (69.0%) y clases Business/Eco equilibradas (47.8% y 45.0%, respectivamente), con Eco Plus subrepresentada (7.2%); el género fue balanceado (50.8% mujeres).
+
+En las continuas, la edad promedió 39.4 años (mediana 40), las puntuaciones de satisfacción oscilaron entre 2.73 (WiFi) y 3.64 (Inflight Service, mediana 3-4/5), indicando niveles medios con tendencia positiva leve. Flight.Distance y retrasos exhibieron asimetría derecha marcada (mediana 843 km y 0 min; medias 1189 km y 14.8-15.2 min), con outliers extremos (>1500 min).
+
+Los histogramas confirmaron bimodalidad en ratings (colas bajas en WiFi/puertas) y colas largas en delays/distancia, sugiriendo heterogeneidad por tipo vuelo.
+
+### EJERCICIO 2
+
+Ejecutad y comentad brevemente análisis bivariados entre la variable de respuesta (*Satisfaction*) y el resto de variables de la base de datos excepto la variable de registro (*id*). (1.5 puntos)
+
+```{r warning=FALSE,message=FALSE,fig.width=12,fig.height=12}
+
+# Análisis Bivariado
+
+# Eliminar variable de registro si existe
+if ("id" %in% names(train)) {
+  train <- train |> select(-id)
+}
+
+# Definir variable respuesta
+response_var <- "Satisfaction"
+
+
+# Identificar tipos de variables
+
+vars_numericas <- train |>
+  dplyr::select(where(is.numeric)) |>
+  names() |>
+  setdiff(response_var)
+
+vars_categoricas <- train |>
+  dplyr::select(where(\(x) !is.numeric(x))) |>
+  names() |>
+  setdiff(response_var)
+
+# 1. Variables numéricas vs Satisfaction
+
+train |>
+  pivot_longer(
+    cols = all_of(vars_numericas),
+    names_to = "variable",
+    values_to = "valor"
+  ) |>
+  ggplot(aes(x = as.factor(Satisfaction), y = valor)) +
+  geom_boxplot(fill = "lightblue") +
+  facet_wrap(~variable, scales = "free_y") +
+  labs(
+    title = "Variables numéricas vs Satisfaction",
+    x = "Satisfaction",
+    y = "Valor"
+  )
+
+# Contrastes no paramétricos (Wilcoxon)
+resultados_wilcoxon <- lapply(
+  vars_numericas,
+  function(var) {
+    wilcox.test(train[[var]] ~ train[[response_var]])$p.value
+  }
+)
+names(resultados_wilcoxon) <- vars_numericas
+resultados_wilcoxon
+
+# 2. Variables categóricas vs Satisfaction
+
+tablas_chi2 <- lapply(
+  vars_categoricas,
+  function(var) {
+    table(train[[var]], train[[response_var]])
+  }
+)
+names(tablas_chi2) <- vars_categoricas
+tablas_chi2
+
+# Test Chi-cuadrado
+resultados_chi2 <- lapply(
+  vars_categoricas,
+  function(var) {
+    chisq.test(table(train[[var]], train[[response_var]]), simulate.p.value = TRUE)$p.value
+  }
+)
+names(resultados_chi2) <- vars_categoricas
+resultados_chi2
+```
+
+2. El análisis bivariado muestra que la satisfacción depende principalmente de la experiencia a bordo y del perfil del pasajero. Todas las puntuaciones inflight (WiFi, comida, entretenimiento, limpieza, check-in, etc.) presentan diferencias altamente significativas entre satisfechos e insatisfechos, mientras que factores como retrasos, aunque estadísticamente significativos, tienen menor impacto.
+
+Entre las variables categóricas, clientes leales, viajes de negocios y clase Business se asocian claramente con mayor satisfacción, mientras que género tiene un efecto muy leve. En resumen, la percepción del servicio y la fidelidad del pasajero son mucho más determinantes que retrasos o características demográficas.
+
+### EJERCICIO 3
+
+Llevad a cabo el ajuste de un modelo de regresión logística para clasificar a los individuos de acuerdo a la variable *Satisfaction*, utilizando la muestra de entrenamiento. Podéis utilizar términos no lineales como polinomios e interacciones para mejorar el ajuste. Justificad y explicad el modelo final al que se llega con este procedimiento. (2 puntos)
+
+```{r message=FALSE, warning=FALSE}
+
+# Regresión logística
+
+require(effects)
+require(car)
+require(pscl)
+
+# Eliminar variable de registro si existe
+if ("id" %in% names(train)) {
+  train <- train |> select(-id)
+}
+
+# Preparar variable respuesta
+train <- train |> mutate(Satisfaction = factor(Satisfaction))
+
+# Eliminar observaciones con NA
+train <- train |> drop_na()
+
+
+# 1. Identificar variables
+vars_numericas <- train |> 
+  dplyr::select(where(is.numeric)) |> 
+  names() |> 
+  setdiff("Satisfaction")
+
+vars_categoricas <- train |> 
+  dplyr::select(where(\(x) !is.numeric(x))) |> 
+  names() |> 
+  setdiff("Satisfaction")
+
+# Convertir categóricas a factor
+train <- train |> mutate(across(all_of(vars_categoricas), factor))
+
+
+#2. Modelo logístico base
+
+modelo_logit_base <- glm(
+  Satisfaction ~ .,
+  data = train,
+  family = binomial
+)
+
+summary(modelo_logit_base)
+AIC(modelo_logit_base)
+
+
+#3. Modelo logístico con polinomios
+
+formula_poly <- as.formula(
+  paste(
+    "Satisfaction ~",
+    paste(
+      c(paste0("poly(", vars_numericas, ", 2)"), vars_categoricas),
+      collapse = " + "
+    )
+  )
+)
+
+modelo_logit_poly <- glm(
+  formula_poly,
+  data = train,
+  family = binomial
+)
+
+summary(modelo_logit_poly)
+AIC(modelo_logit_base, modelo_logit_poly)
+
+#4. Modelo logístico con interacciones
+
+# Nos centramos en Customer.Type * Class
+train <- train |> mutate(
+  Customer.Type = factor(Customer.Type),
+  Class = factor(Class)
+)
+
+modelo_logit_inter <- glm(
+  Satisfaction ~ Customer.Type * Class + Age + Flight.Distance,
+  data = train,
+  family = binomial
+)
+
+summary(modelo_logit_inter)
+AIC(modelo_logit_inter)
+
+# Gráfica de efectos centrada
+ef_inter <- effect(
+  "Customer.Type*Class",
+  modelo_logit_inter,
+  xlevels = list(Class = levels(train$Class), Customer.Type = levels(train$Customer.Type))
+)
+
+plot(
+  ef_inter,
+  multiline = TRUE,
+  main = "Efecto de Customer.Type * Class sobre Satisfaction",
+  ylab = "Probabilidad de estar satisfecho",
+  xlab = "Clase",
+  colors = c("steelblue", "darkorange"),
+  ci.style = "bands"
+)
+
+#4. Selección stepwise
+
+modelo_step <- step(modelo_logit_base, direction = "both")
+summary(modelo_step)
+AIC(modelo_step)
+
+# 5. Diagnósticos finales
+
+# Multicolinealidad
+vif(modelo_step)
+
+# Pseudo R2
+pR2(modelo_step)
+
+```
+3. Regresión logística. El modelo muestra que la satisfacción depende principalmente del servicio a bordo y del perfil del pasajero, más que de retrasos o distancia de vuelo. Ser cliente leal o viajar en Business aumenta mucho la probabilidad de estar satisfecho, mientras que viajes personales o clases Eco/Eco Plus la reducen.
+
+Entre los servicios, WiFi, Online Boarding, Check-In, Inflight Service y Limpieza son los factores más decisivos. Las interacciones muestran que el efecto de la lealtad varía según la clase, subrayando la importancia de segmentar estrategias.
+
+En resumen, para mejorar la satisfacción, las aerolíneas deberían invertir en la experiencia directa del pasajero y cuidar a los clientes leales, más que preocuparse por retrasos mínimos. El modelo ajusta bien (pseudo-R² ≈ 0,51) y es interpretable, capturando los patrones clave que diferencian pasajeros satisfechos de insatisfechos.
+
+
+
+### EJERCICIO 4
+
+Llevad a cabo el ajuste de un modelo de clasificación basado en análisis discriminante para clasificar a los individuos de acuerdo a la variable *Satisfaction*, utilizando la muestra de entrenamiento. Justificad y explicad el modelo final al que se llega con este procedimiento. (2 puntos)
+
+```{r warning=FALSE,message=FALSE,fig.width=12,fig.height=12}
+
+
+require(MASS)
+require(kableExtra)
+require(pROC)
+
+
+# Preparar datos: seleccionar solo variables útiles
+
+train_lda <- train |> 
+  dplyr::select(-any_of("id"), -starts_with("...")) |>  
+  dplyr::select_if(function(x) is.numeric(x) | is.factor(x))
+train_lda$Satisfaction <- factor(train_lda$Satisfaction,
+                                 levels = c("neutral or dissatisfied", "satisfied"))
+
+
+# 2. AJUSTAR MODELO LDA
+cat("### 1. ANÁLISIS DISCRIMINANTE LINEAL (LDA)\n\n")
+
+modelo_lda <- lda(Satisfaction ~ ., data = train_lda)
+
+# Resumen del modelo
+print(modelo_lda)
+
+# Probabilidades previas
+cat("\n**Probabilidades previas (Prior):**\n")
+print(modelo_lda$prior)
+
+
+# 3. PREDICCIONES Y EXACTITUD
+cat("\n### 2. PREDICCIONES Y EXACTITUD\n\n")
+
+pred_lda <- predict(modelo_lda, newdata = train_lda)
+clasificacion_lda <- pred_lda$class
+
+# Matriz de confusión
+matriz_conf_lda <- table(Predicción = clasificacion_lda, 
+                         Real = train_lda$Satisfaction)
+
+cat("#### Matriz de confusión (LDA):\n")
+print(kable(matriz_conf_lda,
+           caption = "Matriz de confusión - LDA",
+           align = c("l", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE,
+                font_size = 10) |>
+  column_spec(1, bold = TRUE, width = "3cm"))
+
+# Exactitud
+exactitud_lda <- mean(clasificacion_lda == train_lda$Satisfaction)
+cat("\n**Exactitud LDA en train:**", round(exactitud_lda, 4), "\n\n")
+
+
+# 4. ANÁLISIS DE VARIABLES DISCRIMINANTES
+cat("\n### 3. ANÁLISIS DE VARIABLES DISCRIMINANTES\n\n")
+
+# Diferencias de medias entre grupos
+means_data <- modelo_lda$means
+diferencias <- means_data["satisfied", ] - means_data["neutral or dissatisfied", ]
+
+# Top 10 variables más discriminativas
+top_10 <- sort(abs(diferencias), decreasing = TRUE)[1:10]
+
+cat("#### Top 10 variables con mayor discriminación:\n\n")
+print(kable(data.frame(
+  Variable = names(top_10),
+  Diferencia = round(top_10, 4)
+), caption = "Top 10 variables con mayor diferencia de medias entre grupos",
+   align = c("l", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE))
+
+# Gráfico de barras
+plot_data <- data.frame(
+  Variable = names(top_10),
+  Diferencia = as.numeric(top_10)
+)
+
+p <- ggplot(plot_data, aes(x = reorder(Variable, Diferencia), y = Diferencia)) +
+  geom_col(fill = "steelblue", alpha = 0.8) +
+  coord_flip() +
+  labs(title = "Diferencia de medias entre grupos (Top 10 variables)",
+       x = "Variables", y = "Diferencia de medias") +
+  theme_minimal()
+
+print(p)
+
+
+# 5. COEFICIENTES DE LA FUNCIÓN DISCRIMINANTE
+cat("\n### 4. COEFICIENTES DE LA FUNCIÓN DISCRIMINANTE\n\n")
+
+# Extraer coeficientes
+coeficientes <- as.data.frame(modelo_lda$scaling)
+coeficientes$Variable <- rownames(coeficientes)
+coeficientes <- coeficientes |> dplyr::select(Variable, LD1)
+
+# Top 15 por importancia
+coef_ordenados <- coeficientes |>
+  arrange(desc(abs(LD1))) |>
+  slice(1:15)
+
+cat("#### Top 15 variables por importancia en función discriminante:\n")
+print(kable(coef_ordenados,
+           caption = "Top 15 coeficientes de la función discriminante",
+           align = c("l", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) |>
+  column_spec(1, bold = TRUE))
+
+
+# 6. DEPURACIÓN DEL MODELO
+cat("\n### 5. DEPURACIÓN DEL MODELO: Variables con baja discriminación\n\n")
+
+# Variables con diferencia < 0.1
+vars_baja_discriminacion <- names(diferencias[abs(diferencias) < 0.1])
+
+if (length(vars_baja_discriminacion) > 0) {
+  cat("#### Variables con baja discriminación (diferencia < 0.1):\n")
+  cat(paste(vars_baja_discriminacion, collapse = ", "), "\n\n")
+  
+  cat("Estas variables presentan medias muy similares entre grupos y por lo tanto\n")
+  cat("tienen bajo poder discriminante. Se recomienda considerar su eliminación\n")
+  cat("para mejorar la interpretabilidad del modelo.\n\n")
+} else {
+  cat("#### Todas las variables muestran poder discriminante significativo\n\n")
+}
+
+
+# 7. GRÁFICO DE DISTRIBUCIÓN DE PUNTUACIONES DISCRIMINANTES
+cat("\n### 6. DISTRIBUCIÓN DE PUNTUACIONES DISCRIMINANTES\n\n")
+
+# Extraer puntuaciones discriminantes
+scores_lda <- pred_lda$x
+
+# Gráfico de distribución por grupo
+plot_data_dist <- data.frame(
+  LD1 = scores_lda[, 1],
+  Group = as.factor(train_lda$Satisfaction)
+)
+
+p_dist <- ggplot(plot_data_dist, aes(x = LD1, fill = Group)) +
+  geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
+  scale_fill_manual(values = c("#FF6B6B", "#4ECDC4")) +
+  labs(title = "Distribución de puntuaciones discriminantes (LD1) por grupo",
+       x = "LD1", y = "Frecuencia",
+       fill = "Satisfacción") +
+  theme_minimal() +
+  theme(legend.position = "top")
+
+print(p_dist)
+
+cat("Este gráfico muestra cómo se separan los dos grupos (satisfied y neutral or dissatisfied)\n")
+cat("según las puntuaciones del primer discriminante lineal (LD1).\n\n")
+
+# 8. CURVA ROC
+cat("\n### 7. CURVA ROC\n\n")
+
+# Probabilidades posteriores
+probs_lda <- pred_lda$posterior[, 2]
+
+# Crear curva ROC
+roc_lda <- roc(train_lda$Satisfaction, probs_lda,
+               levels = c("neutral or dissatisfied", "satisfied"))
+
+# Plotear
+plot(roc_lda, 
+     main = "Curva ROC - Análisis Discriminante Lineal",
+     col = "steelblue", lwd = 2)
+abline(a = 0, b = 1, lty = 2, col = "gray")
+
+auc_value <- auc(roc_lda)
+cat("\n#### Área bajo la curva (AUC):", round(auc_value, 3), "\n\n")
+
+cat("El AUC de", round(auc_value, 3), "indica un rendimiento moderado del modelo.\n")
+cat("Cuanto más cercano sea a 1, mejor será el modelo.\n\n")
+
+# 9. INDICADORES DE RENDIMIENTO
+cat("\n### 8. INDICADORES DE RENDIMIENTO\n\n")
+
+# Extraer valores de matriz de confusión
+tn <- matriz_conf_lda["neutral or dissatisfied", "neutral or dissatisfied"]
+fp <- matriz_conf_lda["satisfied", "neutral or dissatisfied"]
+fn <- matriz_conf_lda["neutral or dissatisfied", "satisfied"]
+tp <- matriz_conf_lda["satisfied", "satisfied"]
+
+sensibilidad <- tp / (tp + fn)
+especificidad <- tn / (tn + fp)
+precision <- tp / (tp + fp)
+f1_score <- 2 * (sensibilidad * precision) / (sensibilidad + precision)
+
+cat("#### Matriz de confusión:\n")
+print(kable(matriz_conf_lda, caption = "Matriz de confusión"))
+
+cat("\n#### Indicadores:\n")
+cat("- Sensibilidad:", round(sensibilidad * 100, 2), "%\n")
+cat("- Especificidad:", round(especificidad * 100, 2), "%\n")
+cat("- Exactitud:", round(exactitud_lda * 100, 2), "%\n")
+cat("- Precisión:", round(precision * 100, 2), "%\n")
+cat("- F1-Score:", round(f1_score * 100, 2), "%\n\n")
+
+cat("La sensibilidad indica qué porcentaje de casos positivos se identifican correctamente.\n")
+cat("La especificidad indica qué porcentaje de casos negativos se identifican correctamente.\n")
+cat("El F1-Score es la media armónica de sensibilidad y precisión.\n\n")
+
+# 10. COMPARACIÓN CON MODELO REDUCIDO
+cat("\n### 9. COMPARACIÓN CON MODELO REDUCIDO\n\n")
+
+# Variables importantes (diferencia >= 0.1)
+vars_importantes <- names(diferencias[abs(diferencias) >= 0.1])
+
+# Modelo LDA con variables importantes
+train_lda_reducido <- train_lda |> 
+  dplyr::select(Satisfaction, any_of(vars_importantes))
+
+# Verificar que hay al menos una variable además de Satisfaction
+if (ncol(train_lda_reducido) > 1) {
+  modelo_lda_reducido <- lda(Satisfaction ~ ., data = train_lda_reducido)
+  
+  pred_lda_reducido <- predict(modelo_lda_reducido, newdata = train_lda_reducido)
+  clasificacion_reducido <- pred_lda_reducido$class
+  exactitud_reducido <- mean(clasificacion_reducido == train_lda_reducido$Satisfaction)
+  
+  cat("#### Modelo completo vs Modelo reducido:\n")
+  cat("- Variables en modelo completo:", ncol(train_lda) - 1, "\n")
+  cat("- Variables en modelo reducido:", ncol(train_lda_reducido) - 1, "\n")  # ← CAMBIO AQUÍ
+  cat("- Exactitud modelo completo:", round(exactitud_lda * 100, 2), "%\n")
+  cat("- Exactitud modelo reducido:", round(exactitud_reducido * 100, 2), "%\n\n")
+}
+
+# 11. CONCLUSIÓN DEL MODELO FINAL
+cat("\n### 10. INTERPRETACIÓN DEL MODELO FINAL\n\n")
+
+cat("**MODELO SELECCIONADO: LDA Completo**\n\n")
+cat("**Exactitud:**", round(exactitud_lda * 100, 2), "%\n\n")
+cat("**Justificación:**\n")
+cat("1. El modelo LDA completo tiene una exactitud del", 
+    round(exactitud_lda * 100, 2), "%\n")
+cat("2. Incluye todas las variables disponibles\n")
+cat("3. Las variables con baja discriminación individual pueden contribuir\n")
+cat("de forma conjunta a la función discriminante.\n")
+cat("4. Asume distribución normal multivariada en cada grupo\n")
+cat("5. Proporciona probabilidades posteriores de clasificación\n\n")
+cat("**Características técnicas:**\n")
+cat("- Crea funciones discriminantes lineales\n")
+cat("- Maximiza la separación entre grupos\n")
+cat("- Proporciona probabilidades posteriores de clasificación\n")
+cat("- Asume homocedasticidad (matrices de covarianza iguales)\n\n")
+cat("**Matriz de confusión:**\n")
+cat("- Verdaderos negativos:", tn, "\n")
+cat("- Falsos positivos:", fp, "\n")
+cat("- Falsos negativos:", fn, "\n")
+cat("- Verdaderos positivos:", tp, "\n")
+cat("- Sensibilidad:", round(sensibilidad * 100, 2), "%\n")
+cat("- Especificidad:", round(especificidad * 100, 2), "%\n\n")
+
+cat("**Conclusión:**\n")
+cat("El modelo LDA completo proporciona una alternativa interpretable\n")
+cat("a la regresión logística para clasificar la satisfacción de los pasajeros.\n")
+cat("Los resultados muestran que el análisis discriminante es viable para este\n")
+cat("problema de clasificación binaria. El análisis gráfico reveló que las\n")
+cat(length(vars_importantes), "variables más discriminativas son suficientes para\n")
+cat("clasificar adecuadamente los pasajeros, aunque el modelo completo mantiene\n")
+cat("un rendimiento ligeramente superior.\n\n")
+
+
+# 12. RESUMEN DE VARIABLES
+cat("\n### 11. RESUMEN DE VARIABLES POR PODER DISCRIMINANTE\n\n")
+
+vars_importantes <- names(diferencias[abs(diferencias) >= 0.1])
+coeficientes_bajos <- as.data.frame(modelo_lda$scaling)
+coeficientes_bajos$Variable <- rownames(coeficientes_bajos)
+vars_baja_discriminacion <- coeficientes_bajos$Variable[abs(coeficientes_bajos$LD1) < 0.1]
+
+comparacion_vars <- data.frame(
+  Categoría = c("Variables importantes", "Variables con baja discriminación", "Total variables"),
+  Cantidad = c(length(vars_importantes), length(vars_baja_discriminacion), ncol(train_lda) - 1),
+  Porcentaje = c(
+    round(length(vars_importantes) / (ncol(train_lda) - 1) * 100, 1),
+    round(length(vars_baja_discriminacion) / (ncol(train_lda) - 1) * 100, 1),
+    100
+  )
+)
+
+print(kable(comparacion_vars,
+           caption = "Resumen de Variables por Poder Discriminante",
+           align = c("l", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) |>
+  column_spec(1, bold = TRUE))
+
+cat("\n**Análisis:**\n")
+cat("- El modelo LDA completo utiliza todas las", ncol(train_lda) - 1, "variables\n")
+cat("- ", length(vars_importantes), "variables tienen poder discriminante significativo\n")
+cat("- ", length(vars_baja_discriminacion), "variables tienen bajo poder discriminante\n")
+cat("- Las variables con bajo poder aún aportan información complementaria\n")
+cat("  al modelo, aunque el modelo reducido con variables importantes\n")
+cat("  mantiene un rendimiento similar.\n")
+```
+4. El análisis discriminante lineal muestra que el modelo clasifica correctamente a la mayoría de los pasajeros, con una exactitud del 87 % y un AUC de 0,925, lo que indica una buena capacidad para diferenciar entre pasajeros satisfechos y no satisfechos. La sensibilidad y la especificidad, superiores al 83 % y 90 % respectivamente, reflejan un rendimiento equilibrado en ambos grupos.
+
+Las variables más relevantes están relacionadas con la experiencia a bordo y el tipo de cliente: ser cliente leal, viajar por negocios o valorar positivamente servicios como el embarque online, la limpieza o el servicio a bordo ayuda a separar claramente a los grupos. Aunque algunas variables muestran bajo poder discriminante individual, en conjunto contribuyen a mejorar la capacidad del modelo, por lo que mantener el modelo completo resulta más eficaz que un modelo reducido.
+
+En resumen, el LDA completo es un modelo sólido, interpretable y útil para predecir la satisfacción de los pasajeros, mostrando claramente qué aspectos influyen en la percepción de su experiencia.
+
+### EJERCICIO 5
+
+Llevad a cabo el ajuste de un modelo de clasificación basado en Naive Bayes para clasificar a los individuos de acuerdo a la variable *Satisfaction*, utilizando la muestra de entrenamiento. Justificad y explicad el modelo final al que se llega con este procedimiento. (2 puntos)
+
+```{r warning=FALSE,message=FALSE}
+
+# MODELO NAIVE BAYES
+
+require(e1071)
+require(reshape2)
+
+# PREPARACIÓN DE DATOS
+train_nb <- train_lda |>  # usar tu dataset limpio
+  drop_na(Satisfaction) |>
+  mutate(Satisfaction = factor(Satisfaction, 
+                               levels = c("neutral or dissatisfied", "satisfied")))
+
+# 1. Convertir variables categóricas a factor
+vars_cat <- sapply(train_nb, is.character)
+train_nb[vars_cat] <- lapply(train_nb[vars_cat], factor)
+
+# 2. NAIVE BAYES COMPLETO
+cat("## 1. NAIVE BAYES - Modelo completo\n\n")
+nb_completo <- naiveBayes(Satisfaction ~ ., data = train_nb)
+
+# Predicciones
+nb_pred_completo <- predict(nb_completo, train_nb)
+
+# Tabla de confusión
+nb_tabla_completo <- table(Prediccion = nb_pred_completo, Real = train_nb$Satisfaction)
+cat("### Matriz de Confusión (Tabla)\n")
+print(nb_tabla_completo)
+
+# Exactitud
+nb_exactitud_completo <- mean(nb_pred_completo == train_nb$Satisfaction)
+cat("\n**Exactitud Naive Bayes completo:**", round(nb_exactitud_completo, 4), "\n\n")
+
+# Métricas
+tn <- nb_tabla_completo[1,1]
+fp <- nb_tabla_completo[1,2]
+fn <- nb_tabla_completo[2,1]
+tp <- nb_tabla_completo[2,2]
+
+metricas_nb <- data.frame(
+  Metrica = c("Exactitud", "Sensibilidad", "Especificidad", "Precisión", "F1-Score"),
+  Valor = c(
+    round(nb_exactitud_completo, 3),
+    round(tp/(tp+fn), 3),
+    round(tn/(tn+fp), 3),
+    round(tp/(tp+fp), 3),
+    round(2*(tp/(tp+fn))*(tp/(tp+fp))/(tp/(tp+fn)+tp/(tp+fp)), 3)
+  )
+)
+
+print(kable(metricas_nb, digits = 3, caption = "Métricas Naive Bayes") |>
+        kable_styling(bootstrap_options = "striped"))
+
+# Probabilidades a priori
+cat("\n## 2. Probabilidades a priori\n")
+print(nb_completo$apriori)
+
+# Probabilidades condicionales (ejemplo)
+cat("\n## 3. Probabilidades condicionales (muestra)\n")
+print(nb_completo$tables$Sat.Food)  # ejemplo rating comida
+print(nb_completo$tables$Class)     # ejemplo clase
+
+# Comparación categóricas
+cat("\n## 4. Ratio Loyal vs Disloyal por Satisfaction\n")
+print(nb_completo$tables$`Customer.Type`)
+
+# Matriz Confusión gráfico
+nb_tabla_df <- as.data.frame(nb_tabla_completo)
+colnames(nb_tabla_df) <- c("Prediccion", "Real", "Frecuencia")
+
+ggplot(nb_tabla_df, aes(x = Real, y = Prediccion, fill = Frecuencia)) +
+  geom_tile(color = "white", linewidth = 1) +
+  geom_text(aes(label = scales::comma(Frecuencia)), 
+            color = "black", fontface = "bold", size = 6) +
+  scale_fill_gradient(low = "yellow", high = "red") +
+  labs(title = "Matriz Confusión - Naive Bayes", 
+       subtitle = paste("Exactitud:", round(nb_exactitud_completo*100,1), "%")) +
+  theme_minimal(base_size = 14)
+
+# Justificación Modelo
+cat("\n## 5. MODELO FINAL: NAIVE BAYES\n\n")
+cat("**Exactitud en train:**", round(nb_exactitud_completo*100,1), "%\n\n")
+
+cat("**Puntos clave:**\n")
+cat("- Modelo probabilístico: predice P(Satisfaction | variables)\n")
+cat("- Funciona bien con datos mixtos (numéricas + categóricas)\n")
+cat("- Robusto a multicolinealidad y variables desbalanceadas\n")
+cat("- Todas las variables contribuyen; no requiere selección manual\n\n")
+
+cat("**Interpretación rápida:**\n")
+cat("- Clientes satisfechos tienen alta probabilidad si Sat.Food=5 o Loyal Customer\n")
+cat("- Clase Business incrementa probabilidad de satisfacción vs Economy\n\n")
+
+cat("**Comparado con otros modelos:**\n")
+cat("- Similar exactitud a LDA y regresión logística\n")
+cat("- NB más flexible con variables categóricas y sin asumir normalidad\n")
+```
+5. El modelo Naive Bayes alcanza una exactitud del 85% al clasificar la satisfacción de los clientes, lo que indica que es bastante fiable para este conjunto de datos. Se observa que los clientes leales y aquellos que valoran muy positivamente la comida tienen más probabilidad de estar satisfechos. Además, la clase del billete influye: los pasajeros en Business muestran mayor satisfacción que los de Economy. Este modelo es especialmente útil porque maneja bien tanto variables numéricas como categóricas, no requiere ajustes complicados y es robusto frente a multicolinealidad o datos desbalanceados. En general, nos permite entender de forma clara qué factores influyen en la satisfacción del cliente y ofrece un resultado interpretable sin complicaciones.
+
+### EJERCICIO 6
+
+Comparad y discutid los anteriores modelos a los que habéis llegado a propósito de algunos indicadores de ajuste/rendimiento vistos en el módulo. (2 puntos)
+
+
+```{r warning=FALSE,message=FALSE,fig.width=12,fig.height=12}
+# COMPARACIÓN DE MODELOS (VERSIÓN TEST)
+
+# 0. CARGAR DATOS
+train <- read_csv("train.csv") %>%
+  drop_na(Satisfaction) %>%
+  mutate(Satisfaction = factor(Satisfaction, 
+                               levels = c("neutral or dissatisfied", "satisfied")))
+
+test <- read_csv("test.csv") %>%
+  drop_na(Satisfaction) %>%
+  mutate(Satisfaction = factor(Satisfaction, 
+                               levels = c("neutral or dissatisfied", "satisfied")))
+
+# 1. CONVERTIR VARIABLES CATEGÓRICAS A FACTOR
+vars_cat <- sapply(train, is.character)
+train[vars_cat] <- lapply(train[vars_cat], factor)
+test[vars_cat]  <- lapply(test[vars_cat], factor) 
+
+# 2. MODELO LOGÍSTICO
+modelo_logit <- step(glm(Satisfaction ~ ., data = train, family = "binomial"), 
+                     direction = "both", trace = FALSE)
+
+test_logit <- test[complete.cases(test[, names(modelo_logit$model)]), ]
+prob_logit <- predict(modelo_logit, newdata = test_logit, type = "response")
+pred_logit <- factor(ifelse(prob_logit > 0.5, "satisfied", "neutral or dissatisfied"),
+                     levels = levels(test_logit$Satisfaction))
+
+tabla_logit <- table(Pred = pred_logit, Real = test_logit$Satisfaction)
+tn_log <- tabla_logit[1,1]; fp_log <- tabla_logit[1,2]
+fn_log <- tabla_logit[2,1]; tp_log <- tabla_logit[2,2]
+
+exact_log <- mean(pred_logit == test_logit$Satisfaction)
+sens_log  <- tp_log/(tp_log+fn_log)
+esp_log   <- tn_log/(tn_log+fp_log)
+prec_log  <- tp_log/(tp_log+fp_log)
+f1_log    <- 2*(sens_log*prec_log)/(sens_log+prec_log)
+
+# 3. MODELO LDA
+modelo_lda <- lda(Satisfaction ~ ., data = train)
+test_lda <- test[complete.cases(test), ] %>% droplevels()
+
+pred_lda <- predict(modelo_lda, newdata = test_lda)$class
+
+tabla_lda <- table(Pred = pred_lda, Real = test_lda$Satisfaction) 
+tn_lda <- tabla_lda[1,1]; fp_lda <- tabla_lda[1,2]
+fn_lda <- tabla_lda[2,1]; tp_lda <- tabla_lda[2,2]
+
+exact_lda <- mean(pred_lda == test_lda$Satisfaction)
+sens_lda  <- tp_lda/(tp_lda+fn_lda)
+esp_lda   <- tn_lda/(tn_lda+fp_lda)
+prec_lda  <- tp_lda/(tp_lda+fp_lda)
+f1_lda    <- 2*(sens_lda*prec_lda)/(sens_lda+prec_lda)
+
+# 4. NAIVE BAYES
+train_nb <- train
+test_nb  <- test
+
+vars_cat_nb <- sapply(train_nb, is.character)
+train_nb[vars_cat_nb] <- lapply(train_nb[vars_cat_nb], factor)
+test_nb[vars_cat_nb]  <- lapply(test_nb[vars_cat_nb], factor)
+
+nb_model <- naiveBayes(Satisfaction ~ ., data = train_nb)
+nb_pred_test <- predict(nb_model, newdata = test_nb)
+
+tabla_nb <- table(Pred = nb_pred_test, Real = test_nb$Satisfaction)
+tn_nb <- tabla_nb[1,1]; fp_nb <- tabla_nb[1,2]
+fn_nb <- tabla_nb[2,1]; tp_nb <- tabla_nb[2,2]
+
+exact_nb <- mean(nb_pred_test == test_nb$Satisfaction)
+sens_nb  <- tp_nb/(tp_nb+fn_nb)
+esp_nb   <- tn_nb/(tn_nb+fp_nb)
+prec_nb  <- tp_nb/(tp_nb+fp_nb)
+f1_nb    <- 2*(sens_nb*prec_nb)/(sens_nb+prec_nb)
+
+# 5. TABLA COMPARATIVA FINAL
+#===== COMPARACIÓN DE MODELOS (TEST) =====#
+
+# Mini-resumen narrativo
+cat("\n===== RESULTADOS EN TEST =====\n\n")
+
+cat("**Modelo Logístico:**\n")
+cat("- Exactitud:", round(exact_log,3),
+    "| Sensibilidad:", round(sens_log,3),
+    "| Especificidad:", round(esp_log,3),
+    "| Precisión:", round(prec_log,3),
+    "| F1-Score:", round(f1_log,3), "\n\n")
+
+cat("**Modelo LDA:**\n")
+cat("- Exactitud:", round(exact_lda,3),
+    "| Sensibilidad:", round(sens_lda,3),
+    "| Especificidad:", round(esp_lda,3),
+    "| Precisión:", round(prec_lda,3),
+    "| F1-Score:", round(f1_lda,3), "\n\n")
+
+cat("**Modelo Naive Bayes:**\n")
+cat("- Exactitud:", round(exact_nb,3),
+    "| Sensibilidad:", round(sens_nb,3),
+    "| Especificidad:", round(esp_nb,3),
+    "| Precisión:", round(prec_nb,3),
+    "| F1-Score:", round(f1_nb,3), "\n\n")
+
+# Tabla comparativa final
+comparacion_modelos <- data.frame(
+  Modelo = c("Logística", "LDA", "Naive Bayes"),
+  Exactitud = c(exact_log, exact_lda, exact_nb),
+  Sensibilidad = c(sens_log, sens_lda, sens_nb),
+  Especificidad = c(esp_log, esp_lda, esp_nb),
+  Precision = c(prec_log, prec_lda, prec_nb),
+  `F1-Score` = c(f1_log, f1_lda, f1_nb)
+)
+
+kable(comparacion_modelos, digits=3, caption = "**EJ6: COMPARACIÓN FINAL - 3 MODELOS (Test)**") %>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                full_width = FALSE) %>%
+  row_spec(0, bold=TRUE, background="steelblue", color="white") %>%
+  row_spec(which.max(comparacion_modelos$Exactitud), bold=TRUE, background="#D4EDDA")
+```
+6. Evaluación de modelos predictivos. Si observamos los resultados de los tres modelos en el conjunto de test, se puede ver que todos funcionan bastante bien, con exactitudes superiores al 84%, lo que indica que capturan la mayoría de los patrones de satisfacción de los clientes. El modelo logístico alcanza la mayor exactitud (87%), seguido muy de cerca por LDA (86,8%), mientras que Naive Bayes queda un poco por debajo (84,4%).
+
+Si nos fijamos en sensibilidad y especificidad, el logístico y LDA mantienen un equilibrio sólido entre detectar clientes satisfechos y no satisfechos, mientras que Naive Bayes tiende a subestimar ligeramente a los clientes satisfechos (sensibilidad más baja) pero sigue siendo razonablemente fiable. La precisión y el F1-Score confirman esta tendencia: el modelo logístico se lleva la delantera, aunque LDA no se queda atrás, y Naive Bayes es un poco más conservador en sus predicciones.
+
+En conjunto, todos los modelos muestran un buen desempeño, con diferencias pequeñas, lo que sugiere que cualquiera podría servir para clasificar la satisfacción, aunque el modelo logístico es ligeramente más fuerte y consistente en este conjunto de datos.
+
+COMENTARIO FINAL
+
+A lo largo del análisis, partiendo de una base de más de 103.000 observaciones y 24 variables, hemos construido y comparado tres modelos predictivos para explicar la satisfacción de los pasajeros: regresión logística, LDA y Naive Bayes. Los tres muestran un rendimiento elevado en test (en torno al 84–87% de exactitud), lo que indica que los patrones detectados son consistentes y estables.
+
+El resultado más claro es que la satisfacción no se explica principalmente por factores operativos como la distancia del vuelo o pequeños retrasos, sino por la experiencia directa del pasajero. Variables como WiFi, entretenimiento, comida, limpieza y calidad del servicio a bordo tienen un peso determinante. A esto se suma el perfil del cliente: ser pasajero leal y viajar en clase Business incrementa notablemente la probabilidad de satisfacción.
+
+Cada modelo aporta un matiz diferente. La regresión logística ofrece la mayor precisión y permite cuantificar efectos con detalle. LDA, en cambio, facilita una lectura más clara de la separación entre grupos y resulta especialmente útil para interpretación gerencial. Naive Bayes, aunque ligeramente menos preciso, demuestra robustez en un contexto de variables mixtas y alta dimensionalidad.
+
+Como toda modelización, el análisis tiene límites: trabajamos con datos de encuesta, que reflejan percepciones declaradas y no necesariamente expectativas individuales o contexto específico del viaje. Además, la correlación entre algunas variables puede amplificar ciertos efectos.
+
+En conjunto, el estudio confirma que invertir en la experiencia a bordo y en la fidelización del cliente genera un impacto mucho mayor que dedicar esfuerzos solo a optimizaciones operativas de poca relevancia. Los tres modelos convergen en el mismo mensaje estratégico, lo que refuerza la solidez de las conclusiones y aporta una base analítica sólida para la toma de decisiones en el sector aéreo.
