@@ -53,6 +53,19 @@ Full psychometric analysis of the Rosenberg Self-Esteem Scale (RSE) on a large p
 
 ---
 
+### Personality & Mental Health Quality of Life — TFM *(in progress)*
+**Module 11** · Group project
+
+Master's thesis predicting mental health-related quality of life (MHRQoL) in police cadets (ISPC) from individual HEXACO personality items using Random Forest and SHAP interpretability analysis. Includes Ridge regression as baseline and GLASSO network analysis.
+
+Group: Lourdes Casado Vidigal ([Minikira85](https://github.com/Minikira85)), Mónica Ginet Pachón Basallo ([mpachonbasa](https://github.com/mpachonbasa)), Michel Fernando Redondo Silva ([michelfrnd](https://github.com/michelfrnd))
+
+Supervised by Macià Buades-Rotger — Universitat de Barcelona
+
+`R` · `randomForest` · `kernelshap` · `shapviz` · `glasso` · `qgraph`
+
+---
+
 ## In progress
 
 **Module 7 — Machine Learning** (results pending)
@@ -68,9 +81,3 @@ Two group projects currently under evaluation:
 MSc in Behavioural Data Science · IL3 — Universitat de Barcelona · Edition 2025–26
 
 60 ECTS · Modules covering behavioural data science, statistics, psychometrics, machine learning, deep learning, data visualisation, and ethics.
-
-## Data privacy
-Some datasets are not included because of academic privacy restrictions. The analyses remain reproducible through the provided code and methodology.
-
-**Tools:** R, tidyverse, ggplot2, lmtest, car, effects, MASS
-
