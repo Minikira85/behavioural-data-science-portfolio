@@ -1,53 +1,73 @@
 # Behavioural Data Science Portfolio
 
-Selected MSc projects in Behavioural Data Science at the Universitat de Barcelona, covering behavioural analysis, longitudinal data, regression modelling, and applied statistics in Python and R.
+Projects developed as part of the MSc in Behavioural Data Science (IL3 — Universitat de Barcelona, 2025–26). The programme combines psychology, psychometrics, machine learning, and data management applied to human behaviour in clinical, social, and organisational contexts.
+
+---
 
 ## Projects
 
-### 🧠 Burnout and Wellbeing in Coaches — Longitudinal Study
-**File:** `burnout_coaching_longitudinal_analysis.ipynb`
+### Data Management & Behavioural Analysis in R
+**`netflix_TPB_behavioural_analysis`** · Module 2
 
-This project analyses psychological wellbeing in a sample of coaches measured at three time points. It uses three validated psychometric scales: Self-Compassion (SCS), Burnout (CBQ), and Perceived Social Support (SSQ).
+Exploratory analysis of streaming platform preferences in a young adult sample. Custom functions built in R to parse and aggregate multi-response variables, with frequency tables and visualisations using tidyverse and ggplot2.
 
-A key part of the work was handling missing data correctly before scoring the scales, since this step has a strong impact on the final results.
-
-**Tools:** Python, pandas, NumPy, matplotlib, seaborn
+`R` · `tidyverse` · `ggplot2`
 
 ---
 
-### 📺 Netflix Usage & Theory of Planned Behaviour — Behavioural Analysis
-**File:** `netflix_TPB_behavioural_analysis.Rmd`
+### Longitudinal Analysis of Burnout and Coaching Intervention
+**`burnout_coaching_longitudinal_analysis`** · Module 2
 
-This project explores Netflix usage patterns in a sample of young people using the Theory of Planned Behaviour (TPB) framework. It covers eight behavioural dimensions, including intention, attitude, perceived control, and social norms.
+Longitudinal analysis of psychological scales (SCS, CBQ, SSQ) measured at three time points in a coaching intervention study. Data management and exploratory analysis in Python.
 
-The analysis includes frequency tables, group comparisons by sex, Pearson correlation matrices with significance testing, and multivariate visualisation.
-
-**Tools:** R, tidyverse, ggplot2, ggcorrplot, GGally
-
-**Note:** Datasets are not included due to academic data privacy restrictions. The code structure and methodology are fully reproducible with equivalent data.
+`Python` · `pandas` · `matplotlib`
 
 ---
 
-### 🚲 Bike Sharing Regression Analysis
-**Project:** Predicting Daily Bike Rentals from Climate Data
+### Regression Modelling — Bike Sharing Demand
+**`bike_sharing_regression_analysis`** · Module 3
 
-This project uses a real bike-sharing dataset with 731 daily observations to build and validate a multiple linear regression model predicting daily rentals from climate and weather variables.
+Linear regression model predicting daily bike rental demand from weather and temporal variables. Full pipeline from data cleaning and descriptive analysis to model evaluation in R.
 
-The analysis includes descriptive and bivariate exploration, progressive model building, backward elimination, and full validation using diagnostic tests and plots. Final performance was evaluated on a held-out test set using RMSE and R².
+`R` · `tidyverse` · `ggplot2`
 
-**Tools:** R, tidyverse, ggplot2, lmtest, car, effects, MASS
+---
 
+### Classification — Airline Passenger Satisfaction
+**`airline_satisfaction_classification_m3`** · Module 3 · Group project
 
-## Focus areas
-- Behavioural data analysis.
-- Longitudinal study design.
-- Statistical modelling and regression.
-- Reproducible workflows.
-- Data visualisation.
-- Applied research in health and behaviour.
+Statistical classification model predicting passenger satisfaction from flight and service variables. Includes descriptive analysis, feature exploration, and model evaluation.
 
-## What this repository shows
-This portfolio demonstrates how I approach data analysis in behavioural and health contexts, from data preparation and missing-data handling to modelling, interpretation, and visual communication.
+Group: Lourdes Casado Vidigal ([Minikira85](https://github.com/Minikira85)), Mónica Ginet Pachón Basallo ([mpachonbasa](https://github.com/mpachonbasa)), Carlos Darío Rubí Turrent ([rubiturrent-CD](https://github.com/rubiturrent-CD)), Pamela Valembois Madrigal ([pvalembois](https://github.com/pvalembois))
+
+`R` · `tidyverse` · `ggplot2`
+
+---
+
+### Psychometric Analysis — Rosenberg Self-Esteem Scale
+**`RSE_psychometric_analysis`** · Module 6
+
+Full psychometric analysis of the Rosenberg Self-Esteem Scale (RSE) on a large population sample (N ≈ 48,000). Includes exploratory factor analysis (EFA), confirmatory factor analysis (CFA), and differential item functioning (DIF) by gender.
+
+`R` · `psych` · `lavaan` · `lordif`
+
+---
+
+## In progress
+
+**Module 7 — Machine Learning** (results pending)
+
+Two group projects currently under evaluation:
+- Unsupervised learning: K-means clustering with PCA on OCEAN personality test data (19,719 participants, 55 variables)
+- Supervised learning: binary classification of early diabetes using neural networks (TensorFlow/Keras), with hyperparameter tuning and Dropout regularisation
+
+---
+
+## Academic context
+
+MSc in Behavioural Data Science · IL3 — Universitat de Barcelona · Edition 2025–26
+
+60 ECTS · Modules covering behavioural data science, statistics, psychometrics, machine learning, deep learning, data visualisation, and ethics.
 
 ## Data privacy
 Some datasets are not included because of academic privacy restrictions. The analyses remain reproducible through the provided code and methodology.
