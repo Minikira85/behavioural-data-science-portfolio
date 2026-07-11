@@ -73,7 +73,7 @@ Supervised by Macià Buades-Rotger - Universitat de Barcelona
 
 K-means clustering with PCA on OCEAN personality test data (19,719 participants, 55 variables). Includes dimensionality reduction, cluster evaluation and visualisation.
 
-Group: [Minikira85](https://github.com/Minikira85), [mpachonbasa](https://github.com/mpachonbasa), [michelfrnd](https://github.com/michelfrnd), [pvalembois](https://github.com/pvalembois)
+Group: [Minikira85](https://github.com/Minikira85), [mpachonbasa](https://github.com/mpachonbasa), [michelfrnd](https://github.com/michelfrnd), [Ryu-Studio](https://github.com/Ryu-Studio), [pvalembois](https://github.com/pvalembois)
 
 `Python` · `scikit-learn` · `KMeans` · `PCA` · `matplotlib` · `seaborn`
 
@@ -83,7 +83,6 @@ Group: [Minikira85](https://github.com/Minikira85), [mpachonbasa](https://github
 **`diabetes_classification_neural_network_m7`** · Module 7 · Group project
 
 Binary classification of early diabetes using neural networks (TensorFlow/Keras). Includes hyperparameter tuning, Dropout regularisation and model evaluation.
-
-Group: [Minikira85](https://github.com/Minikira85), [mpachonbasa](https://github.com/mpachonbasa), [michelfrnd](https://github.com/michelfrnd), [pvalembois](https://github.com/pvalembois)
+Group: [Minikira85](https://github.com/Minikira85), [mpachonbasa](https://github.com/mpachonbasa), [michelfrnd](https://github.com/michelfrnd), [Ryu-Studio](https://github.com/Ryu-Studio), [pvalembois](https://github.com/pvalembois)
 
 `Python` · `TensorFlow` · `Keras` · `pandas` · `matplotlib`
