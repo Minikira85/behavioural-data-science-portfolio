@@ -38,13 +38,13 @@ Linear regression model predicting daily bike rental demand from weather and tem
 
 Statistical classification model predicting passenger satisfaction from flight and service variables. Includes descriptive analysis, feature exploration, and model evaluation.
 
-Group: Lourdes Casado Vidigal ([Minikira85](https://github.com/Minikira85)), Mónica Ginet Pachón Basallo ([mpachonbasa](https://github.com/mpachonbasa)), Carlos Darío Rubí Turrent ([rubiturrent-CD](https://github.com/rubiturrent-CD)), Pamela Valembois Madrigal ([pvalembois](https://github.com/pvalembois))
+Group: Lourdes Casado([Minikira85](https://github.com/Minikira85)),([mpachonbasa](https://github.com/mpachonbasa)), ([rubiturrent-CD](https://github.com/rubiturrent-CD)),([pvalembois](https://github.com/pvalembois))
 
 `R` · `tidyverse` · `ggplot2`
 
 ---
 
-### Psychometric Analysis — Rosenberg Self-Esteem Scale
+### Psychometric Analysis - Rosenberg Self-Esteem Scale
 **`RSE_psychometric_analysis`** · Module 6
 
 Full psychometric analysis of the Rosenberg Self-Esteem Scale (RSE) on a large population sample (N ≈ 48,000). Includes exploratory factor analysis (EFA), confirmatory factor analysis (CFA), and differential item functioning (DIF) by gender.
@@ -58,26 +58,32 @@ Full psychometric analysis of the Rosenberg Self-Esteem Scale (RSE) on a large p
 
 Master's thesis predicting mental health-related quality of life (MHRQoL) in police cadets (ISPC) from individual HEXACO personality items using Random Forest and SHAP interpretability analysis. Includes Ridge regression as baseline and GLASSO network analysis.
 
-Group: Lourdes Casado Vidigal ([Minikira85](https://github.com/Minikira85)), Mónica Ginet Pachón Basallo ([mpachonbasa](https://github.com/mpachonbasa)), Michel Fernando Redondo Silva ([michelfrnd](https://github.com/michelfrnd))
+Group: Lourdes Casado Vidigal ([Minikira85](https://github.com/Minikira85)),([mpachonbasa](https://github.com/mpachonbasa)),([michelfrnd](https://github.com/michelfrnd))
 
-Supervised by Macià Buades-Rotger — Universitat de Barcelona
+Supervised by Macià Buades-Rotger - Universitat de Barcelona
 
 `R` · `randomForest` · `kernelshap` · `shapviz` · `glasso` · `qgraph`
 
 ---
 
-## In progress
+## Module 7 - Machine Learning
 
-**Module 7 — Machine Learning** (results pending)
+### Unsupervised Learning — Personality Clustering
+**`personality_clustering_unsupervised_m7`** · Module 7 · Group project
 
-Two group projects currently under evaluation:
-- Unsupervised learning: K-means clustering with PCA on OCEAN personality test data (19,719 participants, 55 variables)
-- Supervised learning: binary classification of early diabetes using neural networks (TensorFlow/Keras), with hyperparameter tuning and Dropout regularisation
+K-means clustering with PCA on OCEAN personality test data (19,719 participants, 55 variables). Includes dimensionality reduction, cluster evaluation and visualisation.
+
+Group: [Minikira85](https://github.com/Minikira85), [mpachonbasa](https://github.com/mpachonbasa), [michelfrnd](https://github.com/michelfrnd), [pvalembois](https://github.com/pvalembois)
+
+`Python` · `scikit-learn` · `KMeans` · `PCA` · `matplotlib` · `seaborn`
 
 ---
 
-## Academic context
+### Supervised Learning — Diabetes Classification
+**`diabetes_classification_neural_network_m7`** · Module 7 · Group project
 
-MSc in Behavioural Data Science · IL3 — Universitat de Barcelona · Edition 2025–26
+Binary classification of early diabetes using neural networks (TensorFlow/Keras). Includes hyperparameter tuning, Dropout regularisation and model evaluation.
 
-60 ECTS · Modules covering behavioural data science, statistics, psychometrics, machine learning, deep learning, data visualisation, and ethics.
+Group: [Minikira85](https://github.com/Minikira85), [mpachonbasa](https://github.com/mpachonbasa), [michelfrnd](https://github.com/michelfrnd), [pvalembois](https://github.com/pvalembois)
+
+`Python` · `TensorFlow` · `Keras` · `pandas` · `matplotlib`
